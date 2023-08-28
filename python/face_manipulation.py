@@ -95,7 +95,7 @@ class FaceManipulationWithMediaPipe(object):
     landmarks_list = face_recognitor.get_face_landmarks(results)
     target_image = face_recognitor.decorate_landmarks_image(target_image, landmarks_list)
     '''
-    def __init__(self, output_face_blendshapes: bool=True, output_facial_transformation_matrixes: bool=True) -> None:
+    def __init__(self, output_face_blendshapes: bool=False, output_facial_transformation_matrixes: bool=False) -> None:
         base_options = mp.tasks.BaseOptions(model_asset_path='trained_models/face_landmarker.task')
         face_landmarker = mp.tasks.vision.FaceLandmarker
         face_landmarker_options = mp.tasks.vision.FaceLandmarkerOptions
