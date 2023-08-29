@@ -4,6 +4,8 @@ import sys
 import time
 import math
 import pprint
+from tqdm import tqdm
+import glob
 
 # Logging
 import logging
@@ -18,6 +20,7 @@ logger.addHandler(stream_handler)
 # Advanced modules
 import numpy as np
 import cv2
+import dlib
 import face_recognition
 import mediapipe as mp
 from mediapipe import solutions
@@ -43,7 +46,13 @@ class FaceManipulationWithFaceRecognition(object):
         self.known_face_encodings = []
         self.known_face_names = []
 
-        self.verbose = verbose
+        if verbose: self._print_information()
+
+    def _print_information(self) -> None:
+        logger.info('-' * 50)
+        logger.info('GPU利用可能: %s' % (dlib.DLIB_USE_CUDA))
+        logger.info('GPU数: %d' % (dlib.cuda.get_num_devices()))
+        logger.info('-' * 50)
 
     def append_known_person(self, images: list[str], name: str) -> None:
         for image in images:
@@ -65,7 +74,7 @@ class FaceManipulationWithFaceRecognition(object):
         return face_locations, face_landmarks
 
     def get_face_information(self, image):
-        face_locations = face_recognition.face_locations(image, model=self.ML_type)
+        face_locations = face_recognition.face_locations(image, number_of_times_to_upsample=0, model=self.ML_type)
         face_landmarks = face_recognition.face_landmarks(image, face_locations)
         face_encodings = face_recognition.face_encodings(image, face_locations)
 
@@ -196,14 +205,18 @@ class FaceLandmarksCalibration(object):
         return correspondences
 
 if __name__ == '__main__':
-    image = cv2.imread('../images/model10211041_TP_V4.jpg')
-
     # face_recognitionを用いた人物検出
     face_recognitor = FaceManipulationWithFaceRecognition()
-    face_recognitor.append_known_person(
-        images=['../images/model10211041_TP_V4.jpg'], name='Suke',
-    )
-    face_recognitor.get_face_information(image=image)
+    for name in os.listdir('/home/oishi/still_image_selector/Portfolio/Sample/'):
+        face_recognitor.append_known_person(
+            images=[f'/home/oishi/still_image_selector/Portfolio/Sample/{name}/{image}' for image in os.listdir(f'/home/oishi/still_image_selector/Portfolio/Sample//{name}')],
+            name=name,
+        )
+
+    image_paths = glob.glob(os.path.join('/home/oishi/still_image_selector/samples/Sample/', '*.png'))
+    for image_path in tqdm(image_paths):
+        image = cv2.imread(image_path)
+        face_locations, face_landmarks, face_matches = face_recognitor.get_face_information(image=image)
 
     sys.exit(1)
 

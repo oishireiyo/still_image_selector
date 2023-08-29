@@ -46,24 +46,25 @@ class BlurDetection(object):
         return blurrinesses
 
 if __name__ == '__main__':
-    from face_manipulation import FaceRecognition
+    from face_manipulation import FaceManipulationWithFaceRecognition
 
-    face_recognitor = FaceRecognition(ML_type='hog', verbose=True)
-    known_person_path = '/home/oishi/still_image_selector/Portfolio/初恋ざらり/'
+    # face_recognition
+    face_recognitor = FaceManipulationWithFaceRecognition(ML_type='hog', verbose=True)
+    known_person_path = '/home/oishi/still_image_selector/Portfolio/Sample/'
     for name in os.listdir(known_person_path):
         face_recognitor.append_known_person(
             images = [known_person_path + '/' + name + '/' + image for image in os.listdir(known_person_path + name)],
             name = name,
         )
 
-    directory_path = '/home/oishi/still_image_selector/samples/初恋ざらり/'
+    # blur detection
+    blur_detector = BlurDetection(verbose=True)
+
+    # images to be handled
+    directory_path = '/home/oishi/still_image_selector/samples/Sample/'
     image_paths = glob.glob(os.path.join(directory_path, '14*.png'))
-    image_paths = sorted(image_paths)
     for image_path in tqdm(image_paths):
-        features = face_recognitor.face_recognition(image_name=image_path)
-
         image = cv2.imread(image_path)
-        blur_detector = BlurDetection(image=image, verbose=True)
-        features = blur_detector.blur_detection_each_face(features=features)
-
-        logger.info(features)
+        face_locations, _, _ = face_recognitor.get_face_information(image=image)
+        face_blurrinesses = blur_detector.blur_detection_each_face(image=image, face_locations=face_locations)
+        logger.info(face_blurrinesses)
