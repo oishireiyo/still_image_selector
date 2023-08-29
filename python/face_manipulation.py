@@ -16,11 +16,9 @@ stream_handler.setFormatter(handler_format)
 logger.addHandler(stream_handler)
 
 # Advanced modules
-import numpy
+import numpy as np
 import cv2
-
 import face_recognition
-
 import mediapipe as mp
 from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
@@ -37,13 +35,15 @@ class FaceManipulationWithFaceRecognition(object):
     landmarks_list = face_recognitor.get_face_information(target_image)
     target_image = face_recognitor.decorate_landmarks_image(target_image, landmarks_list)
     '''
-    def __init__(self, ML_type='cnn') -> None:
+    def __init__(self, ML_type: str='cnn', verbose: bool=True) -> None:
         # 顔検出の際に使用する機械学習アルゴリズム
         self.ML_type = ML_type
 
         # 既知の人物と画像を保存する
         self.known_face_encodings = []
         self.known_face_names = []
+
+        self.verbose = verbose
 
     def append_known_person(self, images: list[str], name: str) -> None:
         for image in images:
@@ -58,16 +58,29 @@ class FaceManipulationWithFaceRecognition(object):
             self.known_face_encodings.append(_image_encoding)
             self.known_face_names.append(name)
 
-    def get_face_information(self, image):
+    def get_face_locations_and_landmarks(self, image):
         face_locations = face_recognition.face_locations(image, model=self.ML_type)
-        face_encodings = face_recognition.face_encodings(image, face_locations)
         face_landmarks = face_recognition.face_landmarks(image, face_locations)
 
-        face_matches = face_recognition.compare_faces(self.known_face_encodings, face_encodings)
-        face_distances = face_recognition.face_distance(self.known_face_encodings, face_encodings)
+        return face_locations, face_landmarks
 
-        return face_locations, face_encodings, face_landmarks, face_matches, face_distances
+    def get_face_information(self, image):
+        face_locations = face_recognition.face_locations(image, model=self.ML_type)
+        face_landmarks = face_recognition.face_landmarks(image, face_locations)
+        face_encodings = face_recognition.face_encodings(image, face_locations)
 
+        face_matches = []
+        for face_encoding in face_encodings:
+            distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
+            matches = face_recognition.compare_faces(self.known_face_encodings, face_encoding)
+
+            best_match_index = np.argmin(distances)
+            match_name = self.known_face_names[best_match_index]
+            if not matches[best_match_index]:
+                match_name = 'Unknown'
+            face_matches.append(match_name)
+
+        return face_locations, face_landmarks, face_matches
 
     def decorate_landmarks_image(self, image, landmarks_list):
         for landmarks in landmarks_list:
@@ -142,7 +155,7 @@ class FaceLandmarksCalibration(object):
         self.face_recognitor_with_mp = FaceManipulationWithMediaPipe()
 
     def get_face_information_with_fr(self, image):
-        _, _, landmarks_list, _, _ = self.face_recognitor_with_fr.get_face_information(image=image)
+        _, landmarks_list = self.face_recognitor_with_fr.get_face_locations_and_landmarks(image=image)
 
         return landmarks_list
 
@@ -185,6 +198,16 @@ class FaceLandmarksCalibration(object):
 if __name__ == '__main__':
     image = cv2.imread('../images/model10211041_TP_V4.jpg')
 
+    # face_recognitionを用いた人物検出
+    face_recognitor = FaceManipulationWithFaceRecognition()
+    face_recognitor.append_known_person(
+        images=['../images/model10211041_TP_V4.jpg'], name='Suke',
+    )
+    face_recognitor.get_face_information(image=image)
+
+    sys.exit(1)
+
+    # face_recognitionとmedi-pipの橋渡し
     calibrator = FaceLandmarksCalibration()
     correspondances = calibrator.compare(image=image, output_name='hoge.jpg')
 

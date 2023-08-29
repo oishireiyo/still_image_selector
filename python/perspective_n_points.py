@@ -25,21 +25,24 @@ from face_manipulation import FaceManipulationWithFaceRecognition, FaceManipulat
 import colors
 
 class PerspectiveNPoints(object):
-    def __init__(self, width: int, height: int,
+    def __init__(self, width: int=800, height: int=600,
                  calibrated_correspondances=None,
                  landmark_indices: list=[
                      ('chin', 0), ('chin', 8), ('chin', 16), # 輪郭
                      ('nose_bridge', 0), ('nose_bridge', 3), # 鼻筋
                      ('top_lip', 0), ('bottom_lip', 0),      # 唇の端
-                     # ('left_eye', 0), ('right_eye', 3),      # 目の端
+                     ('left_eye', 0), ('right_eye', 3),      # 目の端
                  ],
+                 facial_point_file_path='canonical_face_model/canonical_face_model.obj',
+                 calibration_image_path='../images/model10211041_TP_V4.jpg',
+                 verbose: bool=True
     ):
         # 入力画像の特徴
         self.width = width
         self.height = height
 
         # 顔の情報を記録するオブジェクト
-        self.facial_point_file = 'canonical_face_model/canonical_face_model.obj'
+        self.facial_point_file = facial_point_file_path
         self.facial_points_3d = []
         self.facial_points_2d = []
 
@@ -55,8 +58,14 @@ class PerspectiveNPoints(object):
         # media-pipeとface_recognitionの関係性
         self.correspondances = calibrated_correspondances
         if self.correspondances is None:
-            calibration_image = cv2.imread('../images/model10211041_TP_V4.jpg')
+            calibration_image = cv2.imread(calibration_image_path)
             self.correspondances = FaceLandmarksCalibration().compare(image=calibration_image, output_name='hoge.jpg')
+
+        if verbose: self._print_information()
+
+    def _print_information(self) -> None:
+        logger.info('-' * 50)
+        logger.info('-' * 50)
 
     def parse_canonical_facial_points_3d(self):
         logger.info('一般的な顔の3次元情報を与える、ただし西欧人のモデルなので東洋人に適応できるかは不明。多分できる。')
@@ -74,6 +83,13 @@ class PerspectiveNPoints(object):
 
     def get_correspondances(self):
         return self.correspondances
+
+    def set_camera_matrix(self, width: int, height: int):
+        self.camera_matrix = np.array([
+            (width,     0,  width / 2),
+            (    0, width, height / 2),
+            (    0,      0,         1),
+        ], dtype=np.float32)
 
     def parse_detected_facial_points_2d(self, landmarks):
         self.facial_points_2d = []
@@ -110,7 +126,20 @@ class PerspectiveNPoints(object):
         yaw = math.degrees(math.asin(math.sin(yaw)))
         roll = -math.degrees(math.asin(math.sin(roll)))
 
-        return pitch, yaw, roll
+        return (pitch, yaw, roll)
+
+    def get_roll_pitch_yaw_each_face(self, image, face_locations, face_landmarks):
+        height, width, _ = image.shape
+        self.set_camera_matrix(width=width, height=height)
+
+        pitch_yaw_rolls = []
+        for (top, right, bottom, left), landmarks in zip(face_locations, face_landmarks):
+            clipped_image = image[top:bottom, left:right]
+            self.parse_detected_facial_points_2d(landmarks=landmarks)
+            pitch_yaw_roll = self.get_roll_pitch_yaw()
+            pitch_yaw_rolls.append(pitch_yaw_roll)
+
+        return pitch_yaw_rolls
 
 if __name__ == '__main__':
     input_image = cv2.imread('../images/model10211041_TP_V4.jpg')

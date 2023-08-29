@@ -31,25 +31,19 @@ class BlurDetection(object):
         var = cv2.Laplacian(image, cv2.CV_64F).var()
         return var
 
-    def blur_detection(self, image_name: str) -> float:
-        image = cv2.imread(image_name)
+    def blur_detection(self, image: np.ndarray) -> float:
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        var = self.variance_of_laplacian(image = gray_image)
-        logger.debug('Variance of image convoluted with the laplacian matrix: %.5f' % (var))
+        blurriness = self.variance_of_laplacian(image=gray_image)
+        return blurriness
 
-        return var
-
-    def blur_detection_each_face(self, image_name: str, features: dict) -> dict:
-        image = cv2.imread(image_name)
+    def blur_detection_each_face(self, image: np.ndarray, face_locations: list) -> list[float]:
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        for name in features:
-            top, bottom, left, right = features[name]['bbox']['tblr']
-            gray_image_without_background = gray_image[top:bottom, left:right]
-            var = self.variance_of_laplacian(image = gray_image_without_background)
-            features[name]['laplacian'] = var
-            logger.debug('Variance of image convoluted with the laplacian matrix for %s: %.5f' % (name, var))
-
-        return features
+        blurrinesses = []
+        for (top, right, bottom, left) in face_locations:
+            clipped_gray_image = gray_image[top:bottom, left:right]
+            blurriness = self.variance_of_laplacian(image=clipped_gray_image)
+            blurrinesses.append(blurriness)
+        return blurrinesses
 
 if __name__ == '__main__':
     from face_manipulation import FaceRecognition
