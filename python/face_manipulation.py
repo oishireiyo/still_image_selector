@@ -169,12 +169,12 @@ class FaceLandmarksCalibration(object):
         landmarks_with_fr = self.get_face_information_with_fr(image)[0]
         landmarks_with_mp = self.get_face_information_with_mp(image)[0]
 
-        correspondances = {}
+        correspondences = {}
         
         height, width, _ = image.shape
         logger.info('入力画像のサイズ(h, w) = (%d, %d)' % (height, width))
         for key in landmarks_with_fr:
-            correspondances[key] = {}
+            correspondences[key] = {}
             for i_landmark_with_fr, landmark_with_fr in enumerate(landmarks_with_fr[key]):
                 x_fr, y_fr = landmark_with_fr
                 minimum_euclidian_distance = 100
@@ -185,7 +185,7 @@ class FaceLandmarksCalibration(object):
                     if minimum_euclidian_distance > euclidian_distance:
                         minimum_euclidian_distance = euclidian_distance
                         minimum_euclidian_distance_index = i_landmark_with_mp
-                correspondances[key][i_landmark_with_fr] = minimum_euclidian_distance_index
+                correspondences[key][i_landmark_with_fr] = minimum_euclidian_distance_index
                 logger.info('face_recognitionで検出したランドマーク: %s - %d -> media-pipeで検出したランドマーク: %d (%f)' % (key, i_landmark_with_fr, minimum_euclidian_distance_index, minimum_euclidian_distance))
 
         if not output_name is None:
@@ -193,7 +193,7 @@ class FaceLandmarksCalibration(object):
             image = self.face_recognitor_with_mp.decorate_landmarks_image(image=image, landmarks_list=[landmarks_with_mp])
             cv2.imwrite(output_name, image)
 
-        return correspondances
+        return correspondences
 
 if __name__ == '__main__':
     image = cv2.imread('../images/model10211041_TP_V4.jpg')
@@ -209,6 +209,6 @@ if __name__ == '__main__':
 
     # face_recognitionとmedi-pipの橋渡し
     calibrator = FaceLandmarksCalibration()
-    correspondances = calibrator.compare(image=image, output_name='hoge.jpg')
+    correspondences = calibrator.compare(image=image, output_name='hoge.jpg')
 
-    pprint.pprint(correspondances)
+    pprint.pprint(correspondences)

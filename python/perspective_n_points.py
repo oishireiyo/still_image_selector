@@ -26,7 +26,7 @@ import colors
 
 class PerspectiveNPoints(object):
     def __init__(self, width: int=800, height: int=600,
-                 calibrated_correspondances=None,
+                 calibrated_correspondences=None,
                  landmark_indices: list=[
                      ('chin', 0), ('chin', 8), ('chin', 16), # 輪郭
                      ('nose_bridge', 0), ('nose_bridge', 3), # 鼻筋
@@ -56,10 +56,10 @@ class PerspectiveNPoints(object):
         self.distortion_matrix = np.zeros((4, 1))
 
         # media-pipeとface_recognitionの関係性
-        self.correspondances = calibrated_correspondances
-        if self.correspondances is None:
+        self.correspondences = calibrated_correspondences
+        if self.correspondences is None:
             calibration_image = cv2.imread(calibration_image_path)
-            self.correspondances = FaceLandmarksCalibration().compare(image=calibration_image, output_name='hoge.jpg')
+            self.correspondences = FaceLandmarksCalibration().compare(image=calibration_image, output_name='hoge.jpg')
 
         if verbose: self._print_information()
 
@@ -72,7 +72,7 @@ class PerspectiveNPoints(object):
         with open(self.facial_point_file, mode='r') as f:
             lines = f.readlines()
             for key, index in self.landmark_indices:
-                line_number = self.correspondances[key][index] # landmarkはindex=0からスタートしていることに注意
+                line_number = self.correspondences[key][index] # landmarkはindex=0からスタートしていることに注意
                 elements = lines[line_number].split()
                 self.facial_points_3d.append(
                     (float(elements[1]), float(elements[2]), float(elements[3].replace('\n', ''))))
@@ -81,8 +81,8 @@ class PerspectiveNPoints(object):
     def get_landmark_indices(self):
         return self.landmark_indices
 
-    def get_correspondances(self):
-        return self.correspondances
+    def get_correspondences(self):
+        return self.correspondences
 
     def set_camera_matrix(self, width: int, height: int):
         self.camera_matrix = np.array([
@@ -147,7 +147,7 @@ if __name__ == '__main__':
 
     # face_recognitionを用いた顔検出
     face_recognitor = FaceManipulationWithFaceRecognition()
-    _, _, landmarks_list, _, _ = face_recognitor.get_face_information(image=input_image)
+    _, landmarks_list, _ = face_recognitor.get_face_information(image=input_image)
 
     pnp = PerspectiveNPoints(width=width, height=height)
     pnp.parse_canonical_facial_points_3d()
@@ -165,9 +165,18 @@ if __name__ == '__main__':
     ], dtype=np.float32)
     _, points_2d = pnp.project_given_points_3d_to_2d(points_3d=given_points_3d)
 
-    cv2.arrowedLine(input_image, pt1=(int(points_2d[0][0][0]), int(points_2d[0][0][1])), pt2=(int(points_2d[1][0][0]), int(points_2d[1][0][1])), color=colors.COLOR_RED, thickness=2)
-    cv2.arrowedLine(input_image, pt1=(int(points_2d[0][0][0]), int(points_2d[0][0][1])), pt2=(int(points_2d[2][0][0]), int(points_2d[2][0][1])), color=colors.COLOR_BLUE, thickness=2)
-    cv2.arrowedLine(input_image, pt1=(int(points_2d[0][0][0]), int(points_2d[0][0][1])), pt2=(int(points_2d[3][0][0]), int(points_2d[3][0][1])), color=colors.COLOR_GREEN, thickness=2)
+    cv2.arrowedLine(input_image,
+                    pt1=(int(points_2d[0][0][0]), int(points_2d[0][0][1])),
+                    pt2=(int(points_2d[1][0][0]), int(points_2d[1][0][1])),
+                    color=colors.COLOR_RED, thickness=2)
+    cv2.arrowedLine(input_image,
+                    pt1=(int(points_2d[0][0][0]), int(points_2d[0][0][1])),
+                    pt2=(int(points_2d[2][0][0]), int(points_2d[2][0][1])),
+                    color=colors.COLOR_BLUE, thickness=2)
+    cv2.arrowedLine(input_image,
+                    pt1=(int(points_2d[0][0][0]), int(points_2d[0][0][1])),
+                    pt2=(int(points_2d[3][0][0]), int(points_2d[3][0][1])),
+                    color=colors.COLOR_GREEN, thickness=2)
 
     # media-pipeを用いた顔検出
     face_recognitor = FaceManipulationWithMediaPipe()
@@ -175,15 +184,17 @@ if __name__ == '__main__':
     landmarks_list = face_recognitor.get_face_landmarks(results=results_with_mp)
 
     landmark_indices = pnp.get_landmark_indices()
-    correspondances = pnp.get_correspondances()
+    correspondences = pnp.get_correspondences()
 
     for key, index in landmark_indices:
-        id = correspondances[key][index]
+        id = correspondences[key][index]
         x, y = landmarks_list[0][id]
         cv2.drawMarker(input_image, position=(int(x * width), int(y * height)), color=colors.COLOR_BLACK, markerType=cv2.MARKER_STAR)
 
     cv2.imwrite('aho.jpg', input_image)
 
     pitch, yaw, roll = pnp.get_roll_pitch_yaw()
-    cv2.putText(input_image, text='pitch, yaw, roll = %f, %f, %f' % (pitch, yaw, roll), org=(10, height-10), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, color=colors.COLOR_BLACK)
+    cv2.putText(input_image,
+                text='pitch, yaw, roll = %f, %f, %f' % (pitch, yaw, roll), org=(10, height-10),
+                fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1.0, color=colors.COLOR_BLACK)
     print(pitch, yaw, roll)
