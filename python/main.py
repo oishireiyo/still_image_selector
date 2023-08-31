@@ -28,10 +28,10 @@ from models import Extractor, XMeans, PrincipalComponentAnalysis
 
 class StillImageSelectr():
     def __init__(self, title: str='Sample',
-                 facial_point_file_path='canonical_face_model/canonical_face_model.obj',
-                 calibration_image_path='../images/model10211041_TP_V4.jpg',
+                 facial_point_file_path: str='canonical_face_model/canonical_face_model.obj',
+                 calibration_image_path: str='../images/model10211041_TP_V4.jpg',
                  n_PCA_components: int=10, n_clusters_init=8, n_clusters_max: int=20,
-                 output_file_name='information.csv',
+                 output_file_name: str='information.csv', output_images_enable: bool=False,
                  verbose: bool=True,
                  ) -> None:
         base_path = os.path.dirname(os.path.abspath(__file__))
@@ -64,10 +64,11 @@ class StillImageSelectr():
                                       verbose=verbose)
         self.pnp.parse_canonical_facial_points_3d()
 
-        # Output file name
+        # Output csv and images
         os.makedirs('../outputs/%s' % (title), exist_ok=True)
         self.output_file_path='../outputs/%s' % (title)
         self.output_file_name='%s/%s' % (self.output_file_path, output_file_name)
+        self.output_images_enable = output_images_enable
 
     def _preparation_for_face_recognitor(self):
         for name in os.listdir(self.portfolio_path):
@@ -118,10 +119,11 @@ class StillImageSelectr():
                             f'{pitch},{yaw},{roll},{area_chin},{area_nose},{area_top_lip},{area_bottom_lip},'\
                             f'{area_oral_cavity},{area_left_eye},{area_right_eye}\n'
 
-                self.decorate_image(image=image, location=face_location, landmarks=face_landmark,
-                                    name=face_match, blurriness=face_blurriness,
-                                    angles=(pitch, yaw, roll), cluster_id=cluster_id)
-                cv2.imwrite('%s/%s' % (self.output_file_path, os.path.basename(image_path)), image)
+                if self.output_images_enable:
+                    self.decorate_image(image=image, location=face_location, landmarks=face_landmark,
+                                        name=face_match, blurriness=face_blurriness,
+                                        angles=(pitch, yaw, roll), cluster_id=cluster_id)
+                    cv2.imwrite('%s/%s' % (self.output_file_path, os.path.basename(image_path)), image)
 
         with open(self.output_file_name, mode='w') as f:
             f.write(dump_str)
