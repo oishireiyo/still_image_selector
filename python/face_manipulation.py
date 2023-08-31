@@ -54,6 +54,24 @@ class FaceManipulationWithFaceRecognition(object):
         logger.info('GPU数: %d' % (dlib.cuda.get_num_devices()))
         logger.info('-' * 50)
 
+    def get_polygon_area(self, points):
+        '''
+        指定されたポイント内部の面積を返す。
+        '''
+        S = math.fabs(math.fsum(points[i][0] * points[i-1][1] - \
+                                points[i][1] * points[i-1][0] for i in range(len(points)))) / 2.0
+
+        return S
+
+    def get_two_points_length(self, point1, point2):
+        '''
+        指定された2点間の距離を返す。
+        '''
+        L = math.sqrt(math.pow((point1[0] - point2[0]), 2) + \
+                      math.pow((point1[1] - point2[1]), 2))
+
+        return L
+
     def append_known_person(self, images: list[str], name: str) -> None:
         for image in images:
             if not os.path.isfile(image):
@@ -68,14 +86,13 @@ class FaceManipulationWithFaceRecognition(object):
             self.known_face_names.append(name)
 
     def get_face_locations_and_landmarks(self, image):
-        face_locations = face_recognition.face_locations(image, model=self.ML_type)
+        face_locations = face_recognition.face_locations(image, number_of_times_to_upsample=0, model=self.ML_type)
         face_landmarks = face_recognition.face_landmarks(image, face_locations)
 
         return face_locations, face_landmarks
 
     def get_face_information(self, image):
-        face_locations = face_recognition.face_locations(image, number_of_times_to_upsample=0, model=self.ML_type)
-        face_landmarks = face_recognition.face_landmarks(image, face_locations)
+        face_locations, face_landmarks = self.get_face_locations_and_landmarks(image=image)
         face_encodings = face_recognition.face_encodings(image, face_locations)
 
         face_matches = []
@@ -90,6 +107,20 @@ class FaceManipulationWithFaceRecognition(object):
             face_matches.append(match_name)
 
         return face_locations, face_landmarks, face_matches
+
+    def get_facial_expression(self, landmarks):
+        area_chin = self.get_polygon_area(landmarks['chin'])
+
+        area_nose = self.get_polygon_area(landmarks['nose_tip'] + [landmarks['nose_bridge'][0]])
+
+        area_top_lip = self.get_polygon_area(landmarks['top_lip'])
+        area_bottom_lip = self.get_polygon_area(landmarks['bottom_lip'])
+        area_oral_cavity = self.get_polygon_area(landmarks['top_lip'][7:] + landmarks['bottom_lip'][7:])
+
+        area_left_eye = self.get_polygon_area(landmarks['left_eye'])
+        area_right_eye = self.get_polygon_area(landmarks['right_eye'])
+
+        return area_chin, area_nose, area_top_lip, area_bottom_lip, area_oral_cavity, area_left_eye, area_right_eye
 
     def decorate_landmarks_image(self, image, landmarks_list):
         for landmarks in landmarks_list:

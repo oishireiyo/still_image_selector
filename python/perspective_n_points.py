@@ -28,7 +28,9 @@ class PerspectiveNPoints(object):
     def __init__(self, width: int=800, height: int=600,
                  calibrated_correspondences=None,
                  landmark_indices: list=[
-                     ('chin', 0), ('chin', 8), ('chin', 16), # 輪郭
+                     #('chin', 0),
+                     ('chin', 8),
+                     #('chin', 16), # 輪郭
                      ('nose_bridge', 0), ('nose_bridge', 3), # 鼻筋
                      ('top_lip', 0), ('bottom_lip', 0),      # 唇の端
                      ('left_eye', 0), ('right_eye', 3),      # 目の端
@@ -59,7 +61,7 @@ class PerspectiveNPoints(object):
         self.correspondences = calibrated_correspondences
         if self.correspondences is None:
             calibration_image = cv2.imread(calibration_image_path)
-            self.correspondences = FaceLandmarksCalibration().compare(image=calibration_image, output_name='hoge.jpg')
+            self.correspondences = FaceLandmarksCalibration().compare(image=calibration_image, output_name='calibration.png')
 
         if verbose: self._print_information()
 

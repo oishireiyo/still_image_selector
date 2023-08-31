@@ -160,8 +160,12 @@ cython_debug/
 #.idea/
 
 # user defined
+*.png
+*.jpg
+*.jpeg
 python/canonical_face_model/*
 python/trained_models/*
 images/*
 samples/*
 Portfolio/*
+outputs/*
